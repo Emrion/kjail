@@ -1,0 +1,52 @@
+#!/bin/sh
+
+cdir=`dirname $(readlink -f $0)`
+if [ ! -f "/$cdir/kjail.txz" ]; then
+	echo "File kjail.txz is missing. Installation aborted." >&2
+	exit 1
+fi
+
+if [ $(id -u) -ne 0 ]; then
+	echo "You need to be root to run this." >&2
+	exit 1
+fi
+
+lpool=$(zpool list -o name | tail -n +2)
+
+if [ -z "$lpool" ]; then
+	echo "No pool detected. Installation aborted." >&2
+	exit 1
+fi
+
+zl=$(zfs list | grep /kjail)
+if [ -n "$zl" ]; then
+	echo "kjail seems to be already installed on this system." >&2
+	echo "Please uninstall it before." >&2
+	exit 1
+fi
+
+echo -n "Detected pool(s) are/is: "
+echo $lpool
+while true; do
+	read -p "Choose the pool where to install kjail: " kpool
+	if [ -n "$kpool" ]; then
+		case $lpool in
+			*"$kpool"*) break;;
+		esac
+	fi
+	echo "Please choose a detected pool..."
+done
+
+zfs create $kpool/kjail
+zfs create $kpool/kjail/base
+zfs create $kpool/kjail/jails
+
+mkdir -p /$kpool/kjail/settings/etc
+cp -p /etc/resolv.conf /$kpool/kjail/settings/etc/
+
+tar -xf kjail.txz -C /$kpool/kjail
+sed -i "" -e "s#/\*\*\*/#/$kpool/#" /$kpool/kjail/kjail
+cp /$kpool/kjail/kjail /usr/local/etc/rc.d/
+
+echo "*** kjail has been installed in /$kpool/kjail. ***"
+
