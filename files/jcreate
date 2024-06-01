@@ -1,0 +1,104 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+. $Jdir/functions
+
+if [ -z "$(ls $Jdir/base)" ]; then
+	echo "Base is empty. Use loadbase before to create a jail."
+	return 1
+fi
+
+if [ -z "$1" ]; then
+	read -p "Jail name? " Jname	
+	if [ -z "$Jname" ]; then
+		echo "Jail name can't be empty."
+		return 1
+	fi
+else
+	Jname="$1"
+fi
+
+Jaildir="$Jdir/jails/$Jname"
+
+if $(Dexists $Jaildir); then
+	echo "This jail name already exists. Choose another one."
+	return 1
+fi
+
+echo "We are about to create a new jail named $Jname."
+read -p "Proceed (y/N)? " rep
+case "$rep" in
+	[yY]*) 	;;
+	*) echo "Jail creation canceled."
+	   return 0;;
+esac
+unset rep
+
+# Get the root zfs dataset name
+zJail=`GetKjailDataset`
+if [ -z "$zJail" ]; then
+	echo "Cannot found the kjail root dataset."
+	return 1
+fi
+
+zJail="$zJail/jails/$Jname"
+
+echo "Create dataset $zJail."
+zfs create $zJail
+
+echo "Create dir $Jaildir/root."
+mkdir $Jaildir/root
+
+echo -n "Do you want to assign an ipv4 address to this jail"
+read -p ' [Enter=none]? ' rep
+if [ -n "$rep" ]; then
+	ip4="\n\tip4.addr = $rep;"
+	unset rep
+	echo "Possible interfaces are: $(ifconfig -l)"
+	read -p 'Interface? ' rep
+	if [ -n "$rep" ]; then
+		interface="\n\tinterface = $rep;" 
+	fi
+fi
+unset rep
+
+echo "Create the conf file: $Jaildir/$Jname.conf"
+echo -e "$Jname {\n\tpath = \"$Jdir/jails/\${name}/root\";\n\thost.hostname = \"\${name}\"; \
+\n\texec.start = \"/bin/sh /etc/rc\";\n\texec.stop = \"\";\n\texec.clean; \
+\n\tmount.devfs;\n\tmount.procfs;\n\tmount.fstab = \"$Jdir/jails/\${name}/\${name}.fstab\"; \
+$ip4$interface\n}" > $Jaildir/$Jname.conf
+
+echo "Create the fstab file: $Jaildir/$Jname.fstab"
+echo "$Jdir/base $Jaildir/root/base nullfs ro 0 0" > $Jaildir/$Jname.fstab
+
+cd $Jaildir/root
+
+echo "Copy files from base. It may take a while..."
+mkdir usr
+tocopy='dev etc media mnt net proc root tmp usr/local usr/obj usr/tests var COPYRIGHT'
+for d in $tocopy; do
+	cp -Rp $Jdir/base/$d $d
+done
+
+echo "Create dir $Jaildir/root/base"
+mkdir base
+
+echo 'Create links to base jail.'
+tolink='bin boot lib libexec rescue sbin usr/bin usr/include usr/lib usr/lib32 usr/libdata usr/libexec usr/ports usr/sbin usr/src usr/share'
+for dir in $tolink; do
+	ln -s /base/${dir} ${dir}
+done
+
+echo 'Applying settings to this jail.'
+cp -Rp $Jdir/settings/ .
+
+echo -n "Do you want this jail be automatically launched at boot"
+read -p ' [y/n]? ' rep
+case "$rep" in
+	[yY]*) 	sysrc -f $kjconf jails_list+="$Jname"
+		echo 'Added at the startup list.';;
+	*) 	sysrc -f $kjconf jails_list-="$Jname"
+		echo 'Not added at the startup list.'
+esac
+
+echo "*** Jail creation completed. ***"

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+# Source common functions
+. $Jdir/functions
+
+echo 'Delete previous base snapshot "Ok" if any, and create a new one.'
+MainSnap base destroy ok > /dev/null 2>&1
+MainSnap base create ok
+
+ver=`$Jdir/base/bin/freebsd-version -u`
+env PAGER="/bin/cat" env UNAME_r=$ver freebsd-update -b $Jdir/base \
+ -d $Jdir/base/var/db/freebsd-update -f $Jdir/base/etc/freebsd-update.conf \
+ fetch install
+TestErr "Error during fetching or install" $?
+
+for j in `RKjails`; do
+	echo "Restart jail $j..."
+	$Jdir/restart $j > /dev/null
+done
+
+echo '*** Base update completed. ***'

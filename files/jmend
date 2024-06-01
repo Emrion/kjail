@@ -1,0 +1,41 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+# Source common functions
+. $Jdir/functions
+
+name=$1
+TestArg $0 $name
+TestExists $name
+
+echo "This utility tries to mend a jail when upgrade is incomplete."
+read -p "Do you want to run it on $name (y/N)? " rep
+case "$rep" in
+	[yY]*) 	;;
+	*) echo "Jail mending canceled."
+	   return 0;;
+esac
+unset rep
+
+if !([ `TestRunning $name` ]); then
+	echo "Starting jail $name..."
+	$Jdir/start $name
+	if !([ `TestRunning $1` ]); then
+		echo "Cannot start the jail. Mending aborted."
+		exit 1
+	fi
+fi
+
+echo "Forced upgrade of all packages."
+jexec $name /usr/local/sbin/pkg-static upgrade -fy
+jexec $name /usr/local/sbin/pkg-static autoremove -y
+
+echo "Merging config files."
+jexec $name /usr/sbin/etcupdate diff > /dev/null
+jexec $name /usr/sbin/etcupdate > /dev/null
+jexec $name /usr/sbin/etcupdate resolve
+
+echo "Final restart."	
+$Jdir/restart $name
+echo "*** This jail is supposed be mended. ***"

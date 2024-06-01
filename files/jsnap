@@ -1,0 +1,48 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+. $Jdir/functions
+
+usage()
+{
+	echo 'Usage:'
+	echo "$0 [create|destroy|rollback] JailName SnapshotName"
+	echo "$0 list JailName"
+	exit 1
+}
+
+if [ -z "$2" ]; then
+	usage
+fi
+jail=$2
+TestExists $jail
+
+reset=false
+
+case "$1" in
+	l*) ;;
+	*) if [ -z "$3" ]; then
+		usage
+	   fi
+esac
+case "$1" in
+	r*) if [ "$(TestRunning $jail)" ]; then
+		read -p "This jail is running. Need to shut it down before. (y/N) " rep
+		case "$rep" in
+			[yY]*) 	echo -n "Stopping jail... "
+			        $Jdir/stop $jail	
+				reset=true;;
+			*) echo "Rollback canceled."
+			   return 0;;
+		esac
+	    fi ;;
+esac
+
+MainSnap jail $1 $2 $3
+if [ $? -ne 0 ]; then
+	usage
+fi
+if $reset; then
+	echo "Starting jail $jail."
+	$Jdir/start $jail > /dev/null
+fi

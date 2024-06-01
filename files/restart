@@ -1,0 +1,6 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+$Jdir/stop $1
+$Jdir/start $1

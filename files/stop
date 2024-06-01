@@ -1,0 +1,15 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+# Source common functions
+. $Jdir/functions
+
+name=$1
+TestArg $0 $name
+TestExists $name
+if [ `TestRunning $name` ]; then
+	jail -r -f $Jdir/jails/$name/$name.conf $name	
+else
+	echo "This jail isn't running." >&2
+fi

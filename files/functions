@@ -1,0 +1,134 @@
+# Useful functions. Jdir has to be set
+
+# Source the kjail conf file
+# Only place where the kjail conf file is specified
+kjconf="$Jdir/kjail.conf"
+. $kjconf
+
+# Test if the effective user is root, exit if not
+# All scripts that include this file must be run with root privileges
+
+if [ $(id -u) -ne 0 ]; then
+	echo 'You need to be root to run this.'
+	exit 1
+fi
+
+# ------------ Functions ------------
+
+# Verify if the the freebsd version passed as arg is a release
+TestFBV()
+{
+	rel=$1
+	if [ -z "$rel" ] || [ -z "$(echo $rel|grep '\-RELEASE')" ]; then
+		echo "A XX.x-RELEASE version must be specified. Exiting."
+		exit 1
+	fi
+}
+
+# Verify if the desired release version is compatible with host (loadbase, upgrade)
+TestRelOk()
+{
+	hr=`uname -r | cut -d - -f 1 | tr -d .`
+	rr=`echo $1 | cut -d - -f 1 | tr -d .`
+	if [ $rr -gt $hr ]; then
+		echo "You must upgrade first the host to $1 at least."
+		exit 1
+	fi	
+}
+
+# Test if an error occured $1=to display $2=return value ($?)
+TestErr()
+{
+	if [ "$2" -ne 0 ]; then 
+		echo "$1. Exiting."
+		exit 1
+	fi
+}
+
+# Verify is there is a "Jail_name" on the "command" line.
+# Typically call as: TestArg $0 $1
+TestArg()
+{
+	if [ -z "$2" ]; then
+		echo "Usage: $1 Jail_name"
+		exit 1
+	fi
+}
+
+# Verify if the directory exists.
+Dexists()
+{
+	if [ -d "$1" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+TestExists() 
+{
+	if ! $(Dexists "$Jdir/jails/$1"); then
+		echo 'This jail does not exist.'
+		exit 1
+	fi
+}
+
+# Give a list of kjail jails that are currently running
+RKjails()
+{
+	echo $(jls -N | grep kjail | awk '{ print $1 }')
+}
+
+# Test if the jail is running. 
+TestRunning()
+{
+	r=$(jls | grep kjail | grep $1)
+	if [ -z "$r" ]; then
+		echo
+	else
+		echo 1
+	fi
+}
+
+# Get the kjail root dataset name
+GetKjailDataset()
+{
+	krd=`zfs list -o name,mountpoint | grep $Jdir | cut -f 1 -d ' '| head -1`
+	echo $krd
+}
+
+# Manage snapshots
+# MainSnap base [create|destroy|rollback] SnapshotName
+# MainSnap jail [create|destroy|rollback] JailName SnapshotName
+MainSnap()
+{
+	target=$1
+	command=$2
+	zmain=`GetKjailDataset`
+	if [ -z "$zmain" ]; then
+		echo "Cannot find the kjail root dataset."
+		exit 1
+	fi
+	case "$target" in
+		base) dataset=$zmain/base
+		      name=$3;;
+		jail) dataset=$zmain/jails/$3
+		      name=$4;;
+		*)    return 1;;
+	esac
+	
+	# Let the errors due to lack of arguments to wrappers
+
+	snapname=$dataset@$name
+	case "$command" in
+		l*) zfs list -t snap -o name,referenced,creation | head -1
+	    	    zfs list -t snap -o name,referenced,creation | grep "$dataset"
+	    	    return 0;;
+		c*) zfs snapshot $snapname;;
+		d*) zfs destroy $snapname;;
+		r*) # Let the errors because jails are running up to wrappers
+	    	    zfs rollback $snapname;;
+		*) return 1;;
+	esac	
+}
+

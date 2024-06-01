@@ -1,0 +1,65 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+# Source common functions
+. $Jdir/functions
+
+#------------------------------------------------------------
+site="https://download.freebsd.org/ftp/releases/amd64/amd64"
+#------------------------------------------------------------
+
+rel=$1
+TestFBV $rel
+TestRelOk $rel
+
+rel=$(echo $rel | cut -f1 -d-)
+base=$Jdir/base
+
+jl=`RKjails`
+if [ -n "$jl" ]; then
+	echo "One or more kjails are running, please stop them before loadbase."
+	echo "It could be a good idea to destroy them as well."
+	exit 1
+fi
+
+if [ -z "$(find $base -d 0 -type d -empty)" ]; then
+	read -p "Base isn't empty, do you want to delete the current one (y/N)? " rep
+	case "$rep" in
+		[yY]*) 	echo "This will take some time..."
+			chflags -R noschg $base/
+			rm -Rf $base/*
+			TestErr "Error during the file deletion process" $?
+			rm -f $base/.cshrc $base/.profile ;;		
+		*) echo "Operation canceled."
+	  	   return 0;;
+	esac
+fi
+unset rep
+
+site="$site/$rel-RELEASE"
+
+echo "Fetching base."
+fetch $site/base.txz -o $base
+TestErr "Error fetching base" $?
+echo -n "Extracting archive... "
+tar -xf $base/base.txz -C $base/ -
+TestErr "Error untaring base" $?
+echo "Done."
+rm $base/base.txz
+
+echo "Fetching sources."
+fetch $site/src.txz -o $base
+TestErr "Error fetching sources" $?
+echo -n "Extracting archive... "
+tar -xf $base/src.txz -C $base -
+TestErr "Error untaring sources" $?
+echo "Done."
+rm $base/src.txz
+
+fupconf="$base/etc/freebsd-update.conf"
+echo "Adjusting $fupconf."
+sed -i "" -e "s#Components src world kernel#Components src world#" $fupconf
+echo "CreateBootEnv no" >> $fupconf
+
+echo "*** Base $rel-RELEASE loaded. ***"

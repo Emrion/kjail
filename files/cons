@@ -1,0 +1,12 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+
+# Source common functions
+. $Jdir/functions
+
+name=$1
+TestArg $0 $name
+TestExists $name
+
+jexec $name 

@@ -1,0 +1,147 @@
+#!/bin/sh
+
+# PROVIDE: kjail
+# REQUIRE: LOGIN FILESYSTEMS
+# BEFORE: securelevel
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="kjail"
+desc="Manage the kjail system."
+rcvar="${name}_enable"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+bsnap_cmd="${name}_bsnap"
+cons_cmd="${name}_cons"
+jcreate_cmd="${name}_jcreate"
+jdestroy_cmd="${name}_jdestroy"
+jlist_cmd="${name}_jlist"
+jmend_cmd="${name}_jmend"
+jrename_cmd="${name}_jrename"
+jsnap_cmd="${name}_jsnap"
+jup_cmd="${name}_jup"
+loadbase_cmd="${name}_loadbase"
+restart_cmd="${name}_restart"
+update_cmd="${name}_update"
+upgrade_cmd="${name}_upgrade"
+extra_commands="bsnap cons jcreate jdestroy jlist jmend jrename jsnap jup loadbase restart update upgrade"
+
+load_rc_config $name
+: ${kjail_enable:=no}
+
+Jdir="/***/${name}"
+
+. $Jdir/functions
+
+kjail_start()
+{
+	if [ -n "$1" ]; then
+		echo "Starting jail $1..."
+		$Jdir/start $1 > /dev/null
+	else
+		if [ -n "$jails_list" ]; then
+			echo "Starting all jails in starting list..."
+			for j in $jails_list; do
+				echo "Starting jail $j..."
+				$Jdir/start $j > /dev/null
+			done
+		else
+			echo "No jail to start (starting list is empty)."
+			return 0
+		fi
+	fi	
+}
+
+kjail_stop()
+{
+	if [ -n "$1" ]; then
+		echo "Stopping jail $1..."
+		$Jdir/stop $1 > /dev/null
+	else
+		jl=`RKjails`
+		if [ -n "$jl" ]; then
+			echo "Stopping all jails..."
+			for j in $jl; do
+				echo "Stoping jail $j..."
+				$Jdir/stop $j > /dev/null
+			done
+		else
+			echo "No jail to stop (no running kjail)."
+			return 0
+		fi		
+	fi	
+}
+
+kjail_bsnap()
+{
+	$Jdir/bsnap $1 $2
+}
+
+kjail_cons()
+{
+	$Jdir/cons $1
+}
+
+kjail_jcreate()
+{
+	$Jdir/jcreate $1
+}
+
+kjail_jdestroy()
+{
+	$Jdir/jdestroy $1
+}
+
+kjail_jlist()
+{
+	$Jdir/jlist
+}
+
+kjail_jmend()
+{
+	$Jdir/jmend $1
+}
+
+kjail_jrename()
+{
+	$Jdir/jrename $1 $2
+}
+
+kjail_jsnap()
+{
+	$Jdir/jsnap $1 $2 $3
+}
+
+kjail_jup()
+{
+	$Jdir/jup $1
+}
+
+kjail_loadbase()
+{
+	$Jdir/loadbase $1
+}
+
+kjail_restart()
+{
+	if [ -z "$1" ]; then
+		echo "Please specify a jail name."
+		return 1
+	fi
+	echo "Restarting jail $1..."
+	$Jdir/restart $1 > /dev/null
+}
+
+kjail_update()
+{
+	$Jdir/update
+}
+
+kjail_upgrade()
+{
+	$Jdir/upgrade $1
+}
+
+run_rc_command "$@"

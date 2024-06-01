@@ -1,0 +1,71 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+. $Jdir/functions
+
+usage()
+{
+	echo 'Usage:'
+	echo "$0 OldJailName NewJailName"
+	exit 1
+}
+
+if [ -z "$2" ]; then
+	usage
+fi
+
+oldname=$1
+newname=$2
+
+TestExists $oldname
+
+if $(Dexists "$Jdir/jails/$newname"); then
+	echo "The new jail name already exists. Choose another one."
+	return 1
+fi
+
+# Get the root zfs dataset name
+zJail=`GetKjailDataset`
+if [ -z "$zJail" ]; then
+	echo "Cannot found the kjail root dataset."
+	return 1
+fi
+
+zJail="$zJail/jails"
+reset=false;
+
+if [ "$(TestRunning $oldname)" ]; then
+		read -p "This jail is running. Need to shut it down before. (y/N) " rep
+		case "$rep" in
+			[yY]*) 	echo -n "Stopping jail... "
+			        $Jdir/stop $oldname > /dev/null
+				echo "Done."
+				reset=true;;
+			*) echo "Rename canceled."
+			   return 0;;
+		esac
+fi
+echo "Renaming... "
+zfs rename -f $zJail/$oldname $zJail/$newname
+TestErr "Cannot rename dataset $zJail/$oldname" $?
+
+mv $Jdir/jails/$newname/$oldname.conf $Jdir/jails/$newname/$newname.conf
+mv $Jdir/jails/$newname/$oldname.fstab $Jdir/jails/$newname/$newname.fstab
+
+sed -i "" -e "s#$oldname {#$newname {#" $Jdir/jails/$newname/$newname.conf
+sed -i "" -e "s#/jails/$oldname#/jails/$newname#g" $Jdir/jails/$newname/$newname.fstab
+
+if [ -n "echo $jails_list | grep $oldname" ]; then
+	echo "Replacing $oldname with $newname in jails starting list."
+	sysrc -f $kjconf jails_list-="$oldname"
+	sysrc -f $kjconf jails_list+="$newname"	
+fi
+
+if $reset; then
+	echo -n "Starting jail $newname... "
+	$Jdir/start $newname > /dev/null
+	echo "Done."
+fi
+
+echo "*** Jail renamed from $oldname to $newname. ***"
+

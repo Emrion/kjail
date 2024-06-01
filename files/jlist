@@ -1,0 +1,39 @@
+#!/bin/sh
+
+Jdir=`dirname $(readlink -f $0)`
+. $Jdir/functions
+
+# Give a list of kjail jails, running or not.
+
+# Get the root zfs dataset name
+zJail=`GetKjailDataset`
+if [ -z "$zJail" ]; then
+	echo "Cannot found the kjail root dataset."
+	return 1
+fi
+
+djail=$Jdir/jails
+
+cd $djail
+
+ljails=$(ls -d */ 2>/dev/null | sed -e "s#/##")
+if [ -z "$ljails" ]; then
+	echo "No kjail has been created so far."
+	exit 0
+fi
+
+echo "JailName        Running?       Ip"
+for j in $ljails; do
+	# Minimum verifications that the dir is indeed a kjail
+	if (Dexists $j/root) && [ -f $j/$j.conf ]; then
+		if [ `TestRunning $j` ]; then
+			isrun="Yes"
+		else
+			isrun="No "
+		fi
+		jip=`grep ip4.addr $j/$j.conf | cut -f2 -d = | sed -e "s#;##"`
+		printf "%-18.18s%s     %s\n" "$j" "$isrun" "$jip"
+	fi
+done
+
+
