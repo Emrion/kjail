@@ -1,6 +1,6 @@
 # 1) Description  
 
-kjail is a set of jail management tools. It's based on the sysutils/ezjail principles, but it's simpler, with less options. kjail manages only the jails created by itself. It works only with official supported RELEASE(s). **It requires ZFS.**  
+kjail is a set of jail management tools for FreeBSD (writted and tested on 14.0-RELEASE). It's based on the sysutils/ezjail principles, but it's simpler, with less options. kjail manages only the jails created by itself. It works only with official supported RELEASE(s). **It requires ZFS.**  
 kjail does not spread files in the system. All stays in the same place (depending the pool you choose), except the kjail rc script which lands in /usr/local/etc/rc.d/.  
   
   
