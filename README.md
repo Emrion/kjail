@@ -111,7 +111,7 @@ All commands can be abbreviated like described for bsnap. Ditto concerning the r
 Performs a pkg upgrade on the jail JailName or on all jails that are running if no JailName is provided. A snapshot named "ok" is automatically created for the jail before pkg upgrade, and the previous "ok" snapshot, if any, is deleted.
 
 - **loadbase XX.x-RELEASE**  
-Downloads a RELEASE and its sources into /*kpool*/kjail/base/.
+Downloads a RELEASE and its sources into /\*kpool\*/kjail/base/.
 
 - **restart JailName**  
 Runs a stop and a start of JailName.
