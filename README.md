@@ -52,11 +52,11 @@ You start the jail with:
 `# /*kpool*/kjail/start JailName`  
 
 You get a command line into with:  
-`/*kpool*/kjail/cons JailName`  
+`# /*kpool*/kjail/cons JailName`  
 
 There, you can install the needed softwares, add users, modify configuration files and so on.  
 
-If you want that this jail be launched automatically at boot, its name needs to be present in /*kpool*/kjail/kjail.conf, line jails_list="...". The question is asked at each jail creation. But, after creation, you just have to edit this file to add or remove jail name from the list. Note that jails will be run at boot only if there is kjail_enable=YES in /etc/rc.conf.  
+If you want that this jail be launched automatically at boot, its name needs to be present in /\*kpool\*/kjail/kjail.conf, line jails_list="...". The question is asked at each jail creation. But, after creation, you just have to edit this file to add or remove jail name from the list. Note that jails will be run at boot only if there is kjail_enable=YES in /etc/rc.conf.  
 
 
 # 5) Principles  
