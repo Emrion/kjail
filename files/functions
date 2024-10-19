@@ -15,7 +15,7 @@ fi
 
 # ------------ Functions ------------
 
-# Verify if the the freebsd version passed as arg is a release
+# Verify if the freebsd version passed as arg is a release
 TestFBV()
 {
 	rel=$1
