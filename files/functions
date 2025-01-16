@@ -82,7 +82,7 @@ RKjails()
 # Test if the jail is running. 
 TestRunning()
 {
-	r=$(jls | grep kjail | grep $1)
+	r=$(jls | grep kjail | grep "$1\s")
 	if [ -z "$r" ]; then
 		echo
 	else
