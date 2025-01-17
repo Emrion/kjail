@@ -76,13 +76,13 @@ TestExists()
 # Give a list of kjail jails that are currently running
 RKjails()
 {
-	echo $(jls -N | grep kjail | awk '{ print $1 }')
+	echo $(jls -N | grep /kjail/ | awk '{ print $1 }')
 }
 
 # Test if the jail is running. 
 TestRunning()
 {
-	r=$(jls | grep kjail | grep "$1\s")
+	r=$(jls | grep /kjail/ | grep "\s$1\s")
 	if [ -z "$r" ]; then
 		echo
 	else
